@@ -1,10 +1,26 @@
-# Finite mixture classification
-mixture_gaussian <- function(train_data_1, oracle_1) {
-  y <- evaluate_train(train_data_1, oracle_1)  
-  gauss_mix <- safely(mclust::MclustDA)(train_data_1, as.factor(y), G = 10,
-                                        modelType = "MclustDA")
-  m <- gauss_mix$result
+# high dimensional discriminant analysis
+high_dda <- function(train_data_1, y) {
+  hdda_model <- safely(HDclassif::hdda)(train_data_1, y, model = "ABQkDk")
+
+  m <- hdda_model$result
   if (is.null(m)) return(NULL)
+  
+  function(newx) {
+    m %>% 
+      predict(newx) %>% 
+      `$`("class") %>% 
+      as.character() %>% 
+      as.numeric()
+  }
+}
+
+
+# Finite mixture classification
+mixture_gaussian <- function(train_data_1, y) {
+  gauss_mix <- safely(mclust::Mclust)(train_data_1, as.factor(y), G = 10,
+                                      modelType = "EDDA")
+  m <- gauss_mix$result
+  if (is.null(m)) return(gauss_mix$error)
   
   function(newx) {
     m %>% 
@@ -45,48 +61,54 @@ logit_oracle <- function(train_data_1, oracle_1) {
     est_oracle <- est_oracle_2
   }
   
-  print(threshold)
+  print(sum(evaluate_train(train_data_1, est_oracle) == y))
   if (sum(in_sample_fit == y) <= nrow(train_data_1)) {
-    threshold <- update_threshold(train_data_1, y, est_oracle)
+    z <- update_z(train_data_1, y, est_oracle)
+    est_oracle <- init_oracle_1(num_dim, z = z, threshold = threshold)
   }
   print(sum(evaluate_train(train_data_1, est_oracle) == y))
-  print(threshold)
+  
   function(newx) {
     evaluate_train(newx, est_oracle)
   }
 }
-update_threshold <- function(train_data_1, y, est_oracle) {
+update_z <- function(train_data_1, y, est_oracle) {
   z <- est_oracle$z
+  threshold <- est_oracle$threshold
   current_perf <- sum(evaluate_train(train_data_1, est_oracle) == y)
-  new_oracle <- init_oracle_1(ncol(train_data_1), z = z,
-                              threshold = est_oracle$threshold + 1)
-  new_perf <- sum(evaluate_train(train_data_1, new_oracle) == y)
-  count <- 0
-  while ((new_perf >= current_perf) & (count <= 100)) {
-    est_oracle <- new_oracle
-    current_perf <- new_perf
-    new_oracle <- init_oracle_1(ncol(train_data_1), z = z,
-                                threshold = est_oracle$threshold + 1)
-    new_perf <- sum(evaluate_train(train_data_1, new_oracle) == y)
-    count <- count + 1
+  has_update <- TRUE
+  while (has_update) {
+    has_update <- FALSE
+    for (i in seq_along(z)) {
+      new_z <- z
+      new_z[i] <- abs(new_z[i] - 1)
+      new_oracle <- init_oracle_1(ncol(train_data_1), z = new_z, threshold = threshold)
+      new_perf <- sum(evaluate_train(train_data_1, new_oracle) == y)
+      if (new_perf > current_perf) {
+        z <- new_z
+        est_oracle <- new_oracle
+        current_perf <- new_perf
+        has_update <- TRUE
+        print("Updated!")
+      }
+    }
   }
-  est_oracle$threshold
+  z
 }
 
 
 
 # Logistic regression
-logit <- function(train_data_1, oracle_1) {
-  y <- evaluate_train(train_data_1, oracle_1)  
+logit <- function(train_data_1, y) {
   logit_model <- safely(glmnet::glmnet)(x = train_data_1, y = as.factor(y), 
                                         family = "binomial")
   
   if (is.null(logit_model$result))
-    return(NULL)
+    return(logit_model)
   
-  function(newx) {
+  function(newx, type = 'class') {
     m <- logit_model$result
-    predict(m, newx = newx, type = 'class', s = tail(m$lambda, 1)) %>% 
+    predict(m, newx = newx, type = type, s = tail(m$lambda, 1)) %>% 
       as.character() %>% 
       as.numeric()
   }
@@ -121,8 +143,7 @@ logit_expanded <- function(train_data_1, oracle_1, num_exp = 1000) {
 
 
 # SVM
-caret_svm_linear <- function(train_data_1, oracle_1) {
-  y <- evaluate_train(train_data_1, oracle_1)  
+caret_svm_linear <- function(train_data_1, y) {
   logit_model <- safely(e1071::svm)(x = train_data_1, y = as.factor(y), 
                                     type = "C-classification",
                                     kernel = "linear")
@@ -140,8 +161,7 @@ caret_svm_linear <- function(train_data_1, oracle_1) {
 
 
 # SVM
-caret_svm_sigmoid <- function(train_data_1, oracle_1) {
-  y <- evaluate_train(train_data_1, oracle_1)  
+caret_svm_sigmoid <- function(train_data_1, y) {
   logit_model <- safely(e1071::svm)(x = train_data_1, y = as.factor(y), 
                                     type = "C-classification",
                                     kernel = "sigmoid")
@@ -175,24 +195,45 @@ caret_rf <- function(train_data_1, oracle_1) {
 
 
 # KNN
-myKnn <- function(train_data_1, oracle_1) {
-  y <- evaluate_train(train_data_1, oracle_1)  
-  return(function(test) {
-      class::knn(train = train_data_1, test = test, cl = as.factor(y))
+myKnn <- function(train_data_1, y) {
+  my_data <- data.frame(x = train_data_1, y = y)
+  return(function(test, k = 20, distance = 1, kernel = "optimal", 
+                  threshold = 0.5) {
+    kknn::kknn(
+      formula = y~., train = my_data, data.frame(x = test), k = k, 
+      distance = distance, kernel = kernel
+    ) %>% fitted() %>% binarise(threshold)
   })
 }
 
 
-# KNN
-myNN <- function(train_data_1, oracle_1) {
-  y <- evaluate_train(train_data_1, oracle_1)  
+# NN
+myNN <- function(train_data_1, y, hidden = c(64, 8)) {
   nn_data <- data.frame(x = train_data_1, y = y)
   nn_form <- nn_data %>% names() %>% head(-1) %>% 
     paste(collapse = "+") %>% paste("y ~", .)
-  nn_model <- neuralnet(nn_form, nn_data, hidden = c(25, 5), 
+  nn_model <- neuralnet(nn_form, nn_data, hidden = hidden, 
                         act.fct = 'logistic', linear.output = FALSE)
     
+  return(function(test, threshold = 0.5) {
+    compute(nn_model, test)$net.result %>% `>=`(threshold) %>% as.numeric()
+  })
+}
+
+
+# NN
+myNN_with_features <- function(train_data_1, oracle_1) {
+  y <- evaluate_train(train_data_1, oracle_1)
+  f_num <- 10
+  train_data_1 %<>% df_create_features(f_num)
+  nn_data <- data.frame(x = train_data_1, y = y)
+  nn_form <- nn_data %>% names() %>% head(-1) %>% 
+    paste(collapse = "+") %>% paste("y ~", .)
+  nn_model <- neuralnet(nn_form, nn_data, hidden = c(8, 2), 
+                        act.fct = 'logistic', linear.output = FALSE)
+  
   return(function(test) {
+    test %<>% df_create_features(f_num)
     compute(nn_model, test)$net.result %>% `>=`(0.5) %>% as.numeric()
   })
 }

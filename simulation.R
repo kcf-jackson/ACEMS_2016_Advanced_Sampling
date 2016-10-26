@@ -18,7 +18,7 @@ run_simulation_2 <- function(train_data_2, test_data_2, list_FUN) {
   oracle_2 <- init_oracle_2()
 
   #safeguard
-  y <- evaluate_train(train_data_2, oracle_2)
+  y <- oracle_2$FUN(as.matrix(train_data_2))
   if (all(y == 1) | all(y == 0)) return(numeric(length(list_FUN)))
   
   #Build model
@@ -29,12 +29,14 @@ run_simulation_2 <- function(train_data_2, test_data_2, list_FUN) {
 run_simulation_3 <- function(train_data_3, test_data_3, list_FUN) {
   print("Running simulation...")
   oracle_3 <- init_oracle_3()
+  cat("Number of 1-cluster: ", sum(oracle_3$resp), "\n")
   #safeguard
   y <- evaluate_train(train_data_3, oracle_3)  
   if (all(y == 1) | all(y == 0)) return(numeric(length(list_FUN)))
   #Build model
-  map_dbl(list_FUN, ~model_perf(train_data_3, test_data_3, .x, oracle_3)) %>% 
-    c(model_avg(train_data_3, test_data_3, list_FUN, oracle_3), sum(y))
+  # map_dbl(list_FUN, ~model_perf(train_data_3, test_data_3, .x, oracle_3)) %>% 
+  # c(model_avg(train_data_3, test_data_3, list_FUN, oracle_3), sum(y))
+  map_dbl(list_FUN, ~model_perf(train_data_3, test_data_3, .x, oracle_3))
 }
 model_avg <- function(train_data_1, test_data_1, list_FUN, oracle_1) {
   true_test_y <- evaluate_test(test_data_1, oracle_1)
@@ -47,7 +49,8 @@ model_avg <- function(train_data_1, test_data_1, list_FUN, oracle_1) {
     error_test(true_test_y)
 }
 model_perf <- function(train_data_1, test_data_1, my_FUN, oracle_1) {
-  my_fun_1 <- my_FUN(train_data_1, oracle_1)
+  y <- evaluate_train(train_data_1, oracle_1)
+  my_fun_1 <- my_FUN(train_data_1, y)
   pred_test_y <- pred_test(test_data_1, my_fun_1)
   true_test_y <- evaluate_test(test_data_1, oracle_1)
   error_test(true_test_y, pred_test_y)
@@ -62,5 +65,6 @@ pred_test <- function(test_data_1, my_fun_1) {
     })
 }
 error_test <- function(a, b) {
+  print(map2_dbl(a, b, ~sum(.x == .y)))
   map2_dbl(a, b, ~sum(.x == .y)) %>% min()
 }

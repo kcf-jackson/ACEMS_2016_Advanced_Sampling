@@ -16,8 +16,8 @@ list_divide_by_constant <- function(l1, k) {
 list_binarise <- function(l1) {
   map(l1, ~binarise(.x)) 
 }
-binarise <- function(v0) {
-  as.numeric(v0 >= 0.5)
+binarise <- function(v0, threshold = 0.5) {
+  as.numeric(v0 >= threshold)
 }
 
 

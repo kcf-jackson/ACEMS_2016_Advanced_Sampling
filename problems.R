@@ -20,32 +20,17 @@ init_oracle_1 <- function(d, z, threshold) {
 
 
 # ===== Problem 2 =============================================================
-init_binary_ftn_2 <- function() {}
-init_oracle_2 <- function(n = 128, num_train = 1000) {
-  nn_train <- create_train_data(n = num_train, d = n)
-  # nn_y <- init_oracle_1(d = n, threshold = sample(53:75, 1)) %>% 
-    # evaluate_train(nn_train, .)
-  nn_y <- sample(c(0,1), num_train, replace = TRUE)
-  nn_data <- data.frame(x = nn_train, y = nn_y)
-  nn_form <- nn_data %>% names() %>% head(-1) %>% 
-    paste(collapse = " + ") %>% paste("y ~", .)
-  oracle_2 <- neuralnet(nn_form, nn_data, hidden = c(64, 32, 16, 8, 4, 2),
-                        act.fct = "logistic", linear.output = FALSE)
-  return(
-    list(FUN = function(newx) {
-      if (is.null(dim(newx))) 
-        return(
-          compute(oracle_2, t(newx)) %>% 
-            `$`("net.result") %>% 
-            `>=`(0.5) %>% 
-            as.numeric() 
-          )
-      compute(oracle_2, newx) %>% 
-        `$`("net.result") %>% 
-        `>=`(0.5) %>% 
-        as.numeric() 
-    })
-  )
+init_oracle_2 <- function(d = 128, threshold = 2, threshold_prob = 0.6,
+                          num_nodes = 1) {
+  nn <- create_network(n = d, threshold = threshold, 
+                       threshold_prob = threshold_prob,
+                       num_nodes = num_nodes) 
+  return(list(
+    model = nn,
+    FUN = function(x) {
+      myX <- as.matrix(x)
+      map_dbl(1:nrow(myX), ~evaluate_network(nn, myX[.x, ]))
+    }))
 }
 
 
