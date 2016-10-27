@@ -34,6 +34,6 @@ exploration_train_data <- function(n, d, batch = 100, oracle, near_range = 32) {
     print(nrow(full_train))
   }
   
-  full_train <- sample_n(full_train, n)
+  full_train <- full_train[sample(nrow(full_train), n),]
   list(x = full_train, y = evaluate_train(full_train, oracle))
 }
