@@ -1,12 +1,4 @@
 # ===== Problem 1 =============================================================
-init_binary_ftn_1 <- function(z, threshold) {
-  return( function(x) {
-    exceed_threshold <- sum(xor(x, z)) > threshold
-    as.numeric(exceed_threshold)  
-  } )
-}
-
-
 init_oracle_1 <- function(d, z, threshold) {
   if (missing(z)) 
     z <- sample(c(0,1), d, replace = TRUE)
@@ -16,6 +8,12 @@ init_oracle_1 <- function(d, z, threshold) {
   
   list(z = z, threshold = threshold, 
        FUN = init_binary_ftn_1(z, threshold))
+}
+init_binary_ftn_1 <- function(z, threshold) {
+  return( function(x) {
+    exceed_threshold <- sum(xor(x, z)) > threshold
+    as.numeric(exceed_threshold)  
+  } )
 }
 
 
@@ -32,19 +30,10 @@ init_oracle_2 <- function(d = 128, threshold = 2, threshold_prob = 0.6,
       map_dbl(1:nrow(myX), ~evaluate_network(nn, myX[.x, ]))
     }))
 }
+source("neural_net_creation.R")
 
 
 # ===== Problem 3 =============================================================
-init_binary_ftn_3 <- function(dict, resp) {
-  return( function(x) {
-    ret_index <- 1:nrow(dict) %>% 
-      map_dbl(~sum(x != dict[.x, ])) %>% 
-      which_min_distance()
-    resp[ret_index]
-  } )
-}
-
-
 init_oracle_3 <- function(n = 64, m = 10, dict, resp) {
   if (missing(dict)) 
     dict <- c(0,1) %>% 
@@ -56,4 +45,14 @@ init_oracle_3 <- function(n = 64, m = 10, dict, resp) {
   
   list(dict = dict, resp = resp,
        FUN = init_binary_ftn_3(dict, resp))
+}
+
+
+init_binary_ftn_3 <- function(dict, resp) {
+  return( function(x) {
+    ret_index <- 1:nrow(dict) %>% 
+      map_dbl(~sum(x != dict[.x, ])) %>% 
+      which_min_distance()
+    resp[ret_index]
+  } )
 }

@@ -26,17 +26,17 @@ create_test_data <- function(n) {
 }
 
 
-create_artifical_data <- function(train_data_1, y, n) {
-  if (n == 0) return(NULL)
-  seq(n) %>% 
-    map(function(.x) {
-      sample_index <- sample(nrow(train_data_1), 1)
-      
-      train_vec <- train_data_1[sample_index, ]
-      flip_index <- sample(length(train_vec), 1)
-      
-      train_vec[flip_index] %<>% c_flip_bit()
-      c(X = train_vec, y = y[sample_index])
-    }) %>% 
-    do.call(rbind, .)
-}
+# create_artifical_data <- function(train_data_1, y, n) {
+#   if (n == 0) return(NULL)
+#   seq(n) %>% 
+#     map(function(.x) {
+#       sample_index <- sample(nrow(train_data_1), 1)
+#       
+#       train_vec <- train_data_1[sample_index, ]
+#       flip_index <- sample(length(train_vec), 1)
+#       
+#       train_vec[flip_index] %<>% c_flip_bit()
+#       c(X = train_vec, y = y[sample_index])
+#     }) %>% 
+#     do.call(rbind, .)
+# }
