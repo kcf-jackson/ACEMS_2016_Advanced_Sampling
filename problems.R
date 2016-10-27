@@ -56,3 +56,11 @@ init_binary_ftn_3 <- function(dict, resp) {
     resp[ret_index]
   } )
 }
+
+
+create_response_for_oracle_3 <- function(num_resp) {
+  flip_index <- sample(10, num_resp)
+  resp <- numeric(10)
+  resp[flip_index] %<>% flip_bit()
+  resp
+}

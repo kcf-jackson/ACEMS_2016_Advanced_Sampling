@@ -11,23 +11,29 @@ exploration_sampling <- function(center_vec, num_sample, near_range_sampling) {
 }
 
 
-exploration_train_data <- function(n, d, batch = 100, oracle) {
+exploration_train_data <- function(n, d, batch = 100, oracle, near_range = 32) {
   my_train <- create_train_data(batch, d = d)
   my_y <- evaluate_train(my_train, oracle)
   
   full_train <- current_train <- my_train
   current_y <- my_y
   while(nrow(full_train) < n) {
-    new_train <- map(
-      which(current_y == 1),
-      ~rbind(exploration_sampling(current_train[i, ], 50, 20))
-    ) %>% 
-      do.call(rbind, .)
+    index_set <- current_y == 1
+    if (length(index_set) > 0) {
+      new_train <- map(
+        which(current_y == 1),
+        ~rbind(exploration_sampling(current_train[.x, ], 50, near_range))
+      ) %>% 
+        do.call(rbind, .)
+    } else { 
+      new_train <- map(1:50, ~sample_binary_vector(d)) %>% do.call(rbind, .)
+    }
+    current_train <- new_train
     current_y <- evaluate_train(new_train, oracle)
     full_train %<>% rbind(new_train)
     print(nrow(full_train))
   }
   
-  full_train <- full_train[seq(n), ]
+  full_train <- sample_n(full_train, n)
   list(x = full_train, y = evaluate_train(full_train, oracle))
 }

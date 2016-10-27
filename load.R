@@ -1,12 +1,13 @@
 source("problems.R")
 source("simulate_data.R")
+source("evaluation.R")
 source("util.R")
 
 source("logistic_models.R")
 source("svm_models.R")
 
 
-source("evaluation.R")
+
 source("simulation.R")
 source("models.R")
 source("features.R")

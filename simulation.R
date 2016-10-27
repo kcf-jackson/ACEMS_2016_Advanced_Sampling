@@ -23,57 +23,81 @@ run_simulation_2 <- function(train_data_2, test_data_2, list_FUN) {
 
   #safeguard
   y <- oracle_2$FUN(as.matrix(train_data_2))
-  if (all(y == 1) | all(y == 0)) 
-    return(rep(y[1], length(list_FUN)))
+  if (all(y == 1) | all(y == 0)) {
+    pred_test_y <- array(list(rep(y[1])), length(test_data_1))
+    true_test_y <- evaluate_test(test_data_1, oracle_1)
+    return(error_test(true_test_y, pred_test_y))
+  }
   
-  #Build model
-  map_dbl(list_FUN, ~model_perf(train_data_2, test_data_2, .x, oracle_2))
+  #Build model and evaluate performance
+  list_FUN %>% 
+    map_dbl(~model_perf(train_data_2, test_data_2, .x, oracle_2))
 }
 
 
-run_simulation_3b <- function(test_data_3, list_FUN, .x) {
-  cat("Running simulation", .x, "\n")
-  oracle_3 <- init_oracle_3()
+run_simulation_3 <- function(train_data_3, test_data_3, list_FUN, .x, oracle_3) {
+  print("Running simulation...")
+  if (missing(.x) & missing(oracle_3))
+    stop("Missing input to create the oracle.")
+  if (missing(oracle_3)) {
+    oracle_3 <- .x %>% 
+      create_response_for_oracle_3() %>% 
+      init_oracle_3(resp = .)
+  }
+  cat("Number of 1-cluster: ", sum(oracle_3$resp), "\n")
+  #safeguard
+  y <- evaluate_train(train_data_3, oracle_3)  
+  print(sum(y))
+  if (all(y == 1) | all(y == 0)) {
+    pred_test_y <- array(list(rep(y[1])), length(test_data_3))
+    true_test_y <- evaluate_test(test_data_3, oracle_3)
+    return(error_test(true_test_y, pred_test_y))
+  }
+  
+  list_FUN %>% 
+    map_dbl(~model_perf(train_data_3, test_data_3, .x, oracle_3, verbose = TRUE))
+  ## Ensemble model
+  # map_dbl(list_FUN, ~model_perf(train_data_3, test_data_3, .x, oracle_3)) %>% 
+  # c(model_avg(train_data_3, test_data_3, list_FUN, oracle_3), sum(y))
+}
+# model_avg <- function(train_data_1, test_data_1, list_FUN, oracle_1) {
+#   true_test_y <- evaluate_test(test_data_1, oracle_1)
+#   train_y <- evaluate_train(train_data_1, oracle_1)  
+#   list_FUN %>% 
+#     map(~.x(train_data_1, train_y)) %>% 
+#     map(~pred_test(test_data_1, .x)) %>% 
+#     reduce(function(l0, l1) {map2(l0, l1, ~as.numeric(.x) + as.numeric(.y))}) %>% 
+#     list_divide_by_constant(length(list_FUN)) %>% 
+#     list_binarise() %>% 
+#     error_test(true_test_y)
+# }
+
+
+run_simulation_3b <- function(test_data_3, list_FUN, .x, oracle_3) {
+  print("Running simulation...")
+  if (missing(.x) & missing(oracle_3))
+    stop("Missing input to create the oracle.")
+  if (missing(oracle_3)) {
+    oracle_3 <- .x %>% 
+      create_response_for_oracle_3() %>% 
+      init_oracle_3(resp = .)
+  }
   cat("Number of 1-cluster: ", sum(oracle_3$resp), "\n")
   
   train_data_3 <- exploration_train_data(1000, 64, 100, oracle_3)$x
   #safeguard
   y <- evaluate_train(train_data_3, oracle_3)  
-  if (all(y == 1) | all(y == 0)) return(numeric(length(list_FUN)))
-  #Build model
-  # map_dbl(list_FUN, ~model_perf(train_data_3, test_data_3, .x, oracle_3)) %>% 
-  # c(model_avg(train_data_3, test_data_3, list_FUN, oracle_3), sum(y))
-  map_dbl(list_FUN, ~model_perf(train_data_3, test_data_3, .x, oracle_3))
-}
-
-
-run_simulation_3 <- function(train_data_3, test_data_3, list_FUN, .x) {
-  print("Running simulation...")
-  resp <- numeric(10)
-  flip_index <- sample(10, .x)
-  resp[flip_index] %<>% flip_bit()
+  if (all(y == 1) | all(y == 0)) {
+    pred_test_y <- array(list(rep(y[1])), length(test_data_3))
+    true_test_y <- evaluate_test(test_data_3, oracle_3)
+    return(error_test(true_test_y, pred_test_y))
+  }
   
-  oracle_3 <- init_oracle_3(resp = resp)
-  print(.x)
-  cat("Number of 1-cluster: ", sum(oracle_3$resp), "\n")
-  #safeguard
-  y <- evaluate_train(train_data_3, oracle_3)  
-  if (all(y == 1) | all(y == 0)) return(numeric(length(list_FUN)))
-  #Build model
+  list_FUN %>% 
+    map_dbl(~model_perf(train_data_3, test_data_3, .x, oracle_3, verbose = TRUE))
+  ## Ensemble model
   # map_dbl(list_FUN, ~model_perf(train_data_3, test_data_3, .x, oracle_3)) %>% 
   # c(model_avg(train_data_3, test_data_3, list_FUN, oracle_3), sum(y))
-  map_dbl(list_FUN, ~model_perf(train_data_3, test_data_3, .x, oracle_3))
-}
-model_avg <- function(train_data_1, test_data_1, list_FUN, oracle_1) {
-  true_test_y <- evaluate_test(test_data_1, oracle_1)
-  train_y <- evaluate_train(train_data_1, oracle_1)  
-  list_FUN %>% 
-    map(~.x(train_data_1, train_y)) %>% 
-    map(~pred_test(test_data_1, .x)) %>% 
-    reduce(function(l0, l1) {map2(l0, l1, ~as.numeric(.x) + as.numeric(.y))}) %>% 
-    list_divide_by_constant(length(list_FUN)) %>% 
-    list_binarise() %>% 
-    error_test(true_test_y)
 }
 
 
