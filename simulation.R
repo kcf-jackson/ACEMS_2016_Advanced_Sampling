@@ -1,15 +1,17 @@
 run_simulation_1 <- function(threshold, train_data_1, test_data_1, list_FUN) {
   cat("Threshold:", threshold, "\n")
-  
   num_dim <- ncol(train_data_1)
   oracle_1 <- init_oracle_1(num_dim, threshold = threshold)
   
   #safeguard
   y <- evaluate_train(train_data_1, oracle_1)  
-  if (all(y == 1) | all(y == 0)) 
-    return(numeric(length(list_FUN)))
+  if (all(y == 1) | all(y == 0)) {
+    pred_test_y <- array(list(rep(y[1])), length(test_data_1))
+    true_test_y <- evaluate_test(test_data_1, oracle_1)
+    return(error_test(true_test_y, pred_test_y))
+  }
   
-  #Build model
+  #Build model and evaluate performance
   list_FUN %>% 
     map_dbl(~model_perf(train_data_1, test_data_1, .x, oracle_1))
 }
@@ -21,7 +23,8 @@ run_simulation_2 <- function(train_data_2, test_data_2, list_FUN) {
 
   #safeguard
   y <- oracle_2$FUN(as.matrix(train_data_2))
-  if (all(y == 1) | all(y == 0)) return(numeric(length(list_FUN)))
+  if (all(y == 1) | all(y == 0)) 
+    return(rep(y[1], length(list_FUN)))
   
   #Build model
   map_dbl(list_FUN, ~model_perf(train_data_2, test_data_2, .x, oracle_2))

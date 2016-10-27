@@ -18,31 +18,31 @@ evaluate_df_by_row <- function(df0, oracle) {
 evaluate_train <- evaluate_df_by_row
 
 
-print_result_summary <- function(oracle_1, my_fun_1, test_data_1) {
-  test_perf <- map2_dbl(
-    evaluate_test(test_data_1, oracle_1), 
-    evaluate_test(test_data_1, my_fun_1),
-    ~sum(.x == .y)
-  )
- 
-  cat("Oracle\n")
-  cat("z: \n")
-  print(oracle_1$z)
-  cat("threshold:", oracle_1$threshold, "\n\n")
-  
-  cat("My function\n")
-  cat("z: \n")
-  print(my_fun_1$z)
-  cat("threshold:", my_fun_1$threshold, "\n\n")
-  
-  cat("Differences\n")
-  cat("z:", sum(xor(oracle_1$z, my_fun_1$z)), "\n")
-  cat("threshold:", abs(oracle_1$threshold - my_fun_1$threshold), "\n")
-  cat("test data:", min(test_perf), "\n")
-  
-  return(data.frame(
-    z = sum(xor(oracle_1$z, my_fun_1$z)),
-    threshold = abs(oracle_1$threshold - my_fun_1$threshold),
-    test_perf = min(test_perf)
-  ))
-}
+# print_result_summary <- function(oracle_1, my_fun_1, test_data_1) {
+#   test_perf <- map2_dbl(
+#     evaluate_test(test_data_1, oracle_1), 
+#     evaluate_test(test_data_1, my_fun_1),
+#     ~sum(.x == .y)
+#   )
+#  
+#   cat("Oracle\n")
+#   cat("z: \n")
+#   print(oracle_1$z)
+#   cat("threshold:", oracle_1$threshold, "\n\n")
+#   
+#   cat("My function\n")
+#   cat("z: \n")
+#   print(my_fun_1$z)
+#   cat("threshold:", my_fun_1$threshold, "\n\n")
+#   
+#   cat("Differences\n")
+#   cat("z:", sum(xor(oracle_1$z, my_fun_1$z)), "\n")
+#   cat("threshold:", abs(oracle_1$threshold - my_fun_1$threshold), "\n")
+#   cat("test data:", min(test_perf), "\n")
+#   
+#   return(data.frame(
+#     z = sum(xor(oracle_1$z, my_fun_1$z)),
+#     threshold = abs(oracle_1$threshold - my_fun_1$threshold),
+#     test_perf = min(test_perf)
+#   ))
+# }
