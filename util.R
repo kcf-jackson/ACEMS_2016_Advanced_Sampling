@@ -53,3 +53,8 @@ rename_df <- function(df0, new_names) {
   names(df0) <- new_names
   df0
 }
+
+
+as.numchar <- function(v0) {
+  as.numeric(as.character(v0))
+}

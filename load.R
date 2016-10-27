@@ -1,12 +1,18 @@
-source("setup.R")
+source("problems.R")
+source("simulate_data.R")
 source("util.R")
+
+source("logistic_models.R")
+source("svm_models.R")
+
+
 source("evaluation.R")
 source("simulation.R")
 source("models.R")
-source("problems.R")
 source("features.R")
-source("active_learning.R")
-source("neural_net_creation.R")
+
+# source("active_learning.R")
+source("sampling.R")
 
 
 library(magrittr)
